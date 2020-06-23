@@ -298,7 +298,7 @@ end
 -- looking in the drive direction)
 --- IMPORTANT: the offset for multitool (laneOffset) must not be part of this as it is already part of the
 --- course,
---- @see Course#calculateOffsetCourse()
+--- @see Course#calculateOffsetCourse
 function Course:setOffset(x, z)
 	self.offsetX, self.offsetZ = x, z
 end
@@ -338,6 +338,10 @@ end
 -- PPC relies on waypoint angles, the world direction is needed to calculate offsets
 function Course:enrichWaypointData()
 	if #self.waypoints < 2 then return end
+	self.nHeadlandWaypoints = 0
+	self.headlandLength = 0
+	self.firstHeadlandWpIx = nil
+	self.firstCenterWpIx = nil
 	for i = 1, #self.waypoints - 1 do
 		local cx, _, cz = self:getWaypointPosition(i)
 		local nx, _, nz = self:getWaypointPosition( i + 1)
@@ -1087,7 +1091,7 @@ end
 
 --- Run a function for all waypoints of the course within the last d meters
 ---@param d number
----@param lambda function(waypoint)
+---@param lambda function (waypoint)
 function Course:executeFunctionForLastWaypoints(d, lambda)
 	local i = self:getNumberOfWaypoints()
 	while i > 1 and self:getDistanceToLastWaypoint(i) < d do
@@ -1386,7 +1390,7 @@ function Course:getHeadlandProgress(ix)
 	if not self.firstHeadlandWpIx then return 1 end
 	ix = ix or self.currentWaypoint
 	if ix < self.firstHeadlandWpIx then return 0 end
-	if ix > self.firstHeadlandWpIx + self.nHeadlandWaypoints then return 1 end
+	if ix >= self.firstHeadlandWpIx + self.nHeadlandWaypoints then return 1 end
 	
 	local progress = (ix - self.firstHeadlandWpIx) / self.nHeadlandWaypoints
 	return progress, self.headlandLength
@@ -1400,13 +1404,11 @@ function Course:getCenterProgress(ix)
 	-- TODO: this works only when there is one headland section (no islands or multiple blocks)
 	local nCenterWaypoints = (#self.waypoints - self.nHeadlandWaypoints)
 	if ix < self.firstCenterWpIx then return 0 end
-	if ix > self.firstCenterWpIx + nCenterWaypoints then return 1 end
+	if ix >= self.firstCenterWpIx + nCenterWaypoints then return 1 end
 
 	local progress = (ix - self.firstCenterWpIx) / nCenterWaypoints
 	return progress, self.length - self.headlandLength
 end
-
-
 
 function Course:getAverageWaypointDistanceOnHeadland()
 	if self.nHeadlandWaypoints > 0 then
